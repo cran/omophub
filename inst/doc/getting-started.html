@@ -416,7 +416,7 @@ demonstrates basic usage patterns.</p>
 <div id="autocomplete" class="section level2">
 <h2>Autocomplete</h2>
 <p>Get suggestions for autocomplete:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>suggestions <span class="ot">&lt;-</span> client<span class="sc">$</span>search<span class="sc">$</span><span class="fu">autocomplete</span>(<span class="st">&quot;diab&quot;</span>, <span class="at">max_suggestions =</span> <span class="dv">5</span>)</span>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>suggestions <span class="ot">&lt;-</span> client<span class="sc">$</span>concepts<span class="sc">$</span><span class="fu">suggest</span>(<span class="st">&quot;diab&quot;</span>, <span class="at">page_size =</span> <span class="dv">5</span>)</span>
 <span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="cf">for</span> (s <span class="cf">in</span> suggestions<span class="sc">$</span>suggestions) {</span>
 <span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="fu">print</span>(s<span class="sc">$</span>suggestion)</span>
 <span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>}</span></code></pre></div>
@@ -477,7 +477,7 @@ demonstrates basic usage patterns.</p>
 <p>Map to specific vocabularies:</p>
 <div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>mappings<span class="sc">$</span><span class="fu">get</span>(</span>
 <span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="dv">201826</span>,</span>
-<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="at">target_vocabularies =</span> <span class="fu">c</span>(<span class="st">&quot;ICD10CM&quot;</span>, <span class="st">&quot;ICD9CM&quot;</span>)</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>  <span class="at">target_vocabulary =</span> <span class="st">&quot;ICD10CM&quot;</span></span>
 <span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="error-handling" class="section level2">

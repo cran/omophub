@@ -60,7 +60,7 @@ knitr::opts_chunk$set(
 # )
 
 ## ----autocomplete-------------------------------------------------------------
-# suggestions <- client$search$autocomplete("diab", max_suggestions = 5)
+# suggestions <- client$concepts$suggest("diab", page_size = 5)
 # for (s in suggestions$suggestions) {
 #   print(s$suggestion)
 # }
@@ -113,7 +113,7 @@ knitr::opts_chunk$set(
 ## ----mappings-filter----------------------------------------------------------
 # result <- client$mappings$get(
 #   201826,
-#   target_vocabularies = c("ICD10CM", "ICD9CM")
+#   target_vocabulary = "ICD10CM"
 # )
 
 ## ----error-handling-----------------------------------------------------------
