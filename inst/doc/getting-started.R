@@ -59,6 +59,58 @@ knitr::opts_chunk$set(
 #   page_size = 20
 # )
 
+## ----semantic-search----------------------------------------------------------
+# # Natural language search - understands clinical intent
+# results <- client$search$semantic("high blood sugar levels")
+# for (r in results$data$results) {
+#   cat(sprintf("%s (similarity: %.2f)\n", r$concept_name, r$similarity_score))
+# }
+
+## ----semantic-filtered--------------------------------------------------------
+# results <- client$search$semantic(
+#   "heart attack",
+#   vocabulary_ids = "SNOMED",
+#   domain_ids = "Condition",
+#   threshold = 0.5
+# )
+
+## ----semantic-all-------------------------------------------------------------
+# all_results <- client$search$semantic_all(
+#   "chronic kidney disease",
+#   page_size = 50,
+#   max_pages = 5,
+#   progress = TRUE
+# )
+# print(nrow(all_results))
+
+## ----similar-by-id------------------------------------------------------------
+# # Find concepts similar to Type 2 diabetes mellitus
+# similar <- client$search$similar(concept_id = 201826)
+# for (s in similar$similar_concepts) {
+#   cat(sprintf("%s (score: %.2f)\n", s$concept_name, s$similarity_score))
+# }
+
+## ----similar-by-query---------------------------------------------------------
+# # Semantic similarity (neural embeddings)
+# similar <- client$search$similar(
+#   query = "high blood pressure",
+#   algorithm = "semantic"
+# )
+# 
+# # Lexical similarity (string matching)
+# similar <- client$search$similar(
+#   query = "high blood pressure",
+#   algorithm = "lexical"
+# )
+# 
+# # Hybrid (combined - default)
+# similar <- client$search$similar(
+#   query = "high blood pressure",
+#   algorithm = "hybrid",
+#   include_scores = TRUE,
+#   include_explanations = TRUE
+# )
+
 ## ----autocomplete-------------------------------------------------------------
 # suggestions <- client$concepts$suggest("diab", page_size = 5)
 # for (s in suggestions$suggestions) {
