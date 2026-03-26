@@ -111,6 +111,36 @@ knitr::opts_chunk$set(
 #   include_explanations = TRUE
 # )
 
+## ----bulk-basic---------------------------------------------------------------
+# results <- client$search$bulk_basic(list(
+#   list(search_id = "q1", query = "diabetes mellitus"),
+#   list(search_id = "q2", query = "hypertension"),
+#   list(search_id = "q3", query = "aspirin")
+# ), defaults = list(vocabulary_ids = list("SNOMED"), page_size = 5))
+# 
+# # Each result is matched by search_id
+# for (item in results$results) {
+#   cat(sprintf("%s: %d results\n", item$search_id, length(item$results)))
+# }
+
+## ----bulk-semantic------------------------------------------------------------
+# results <- client$search$bulk_semantic(list(
+#   list(search_id = "s1", query = "heart failure treatment options"),
+#   list(search_id = "s2", query = "type 2 diabetes medication")
+# ), defaults = list(threshold = 0.5, page_size = 10))
+# 
+# for (item in results$results) {
+#   cat(sprintf("%s: %d results\n", item$search_id,
+#               item$result_count %||% length(item$results)))
+# }
+
+## ----bulk-overrides-----------------------------------------------------------
+# # Different domains per query, shared vocabulary filter
+# results <- client$search$bulk_basic(list(
+#   list(search_id = "cond", query = "diabetes", domain_ids = list("Condition")),
+#   list(search_id = "drug", query = "metformin", domain_ids = list("Drug"))
+# ), defaults = list(vocabulary_ids = list("SNOMED", "RxNorm"), page_size = 5))
+
 ## ----autocomplete-------------------------------------------------------------
 # suggestions <- client$concepts$suggest("diab", page_size = 5)
 # for (s in suggestions$suggestions) {
