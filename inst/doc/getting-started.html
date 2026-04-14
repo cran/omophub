@@ -588,6 +588,53 @@ embeddings:</p>
 <span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a>  }</span>
 <span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a>)</span></code></pre></div>
 </div>
+<div id="fhir-to-omop-resolution" class="section level2">
+<h2>FHIR-to-OMOP Resolution</h2>
+<p>The FHIR resolver translates FHIR coded values to OMOP standard
+concepts in a single call — handling URI mapping, code lookup,
+<code>Maps to</code> traversal, and CDM target table assignment
+automatically.</p>
+<div id="single-coding" class="section level3">
+<h3>Single Coding</h3>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>  <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a>  <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>,</span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a>)</span>
+<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>standard_concept<span class="sc">$</span>concept_name)</span>
+<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>target_table)   <span class="co"># &quot;condition_occurrence&quot;</span></span>
+<span id="cb26-8"><a href="#cb26-8" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>mapping_type)   <span class="co"># &quot;direct&quot;</span></span></code></pre></div>
+</div>
+<div id="non-standard-code-automatic-maps-to-traversal" class="section level3">
+<h3>Non-Standard Code (Automatic Maps-to Traversal)</h3>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve</span>(</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>  <span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>,</span>
+<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>  <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span></span>
+<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a>)</span>
+<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>mapping_type)                    <span class="co"># &quot;mapped&quot;</span></span>
+<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>standard_concept<span class="sc">$</span>vocabulary_id)  <span class="co"># &quot;SNOMED&quot;</span></span></code></pre></div>
+</div>
+<div id="batch-resolution" class="section level3">
+<h3>Batch Resolution</h3>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>batch <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_batch</span>(<span class="fu">list</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://loinc.org&quot;</span>, <span class="at">code =</span> <span class="st">&quot;2339-0&quot;</span>)</span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a>))</span>
+<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Resolved: %d/%d</span><span class="sc">\n</span><span class="st">&quot;</span>, batch<span class="sc">$</span>summary<span class="sc">$</span>resolved, batch<span class="sc">$</span>summary<span class="sc">$</span>total))</span></code></pre></div>
+</div>
+<div id="codeableconcept-with-vocabulary-preference" class="section level3">
+<h3>CodeableConcept with Vocabulary Preference</h3>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_codeable_concept</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>  <span class="at">coding =</span> <span class="fu">list</span>(</span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>)</span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>  ),</span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a>)</span>
+<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="co"># SNOMED wins over ICD-10-CM per OHDSI preference</span></span>
+<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>best_match<span class="sc">$</span>resolution<span class="sc">$</span>source_concept<span class="sc">$</span>vocabulary_id)  <span class="co"># &quot;SNOMED&quot;</span></span></code></pre></div>
+</div>
+</div>
 <div id="further-resources" class="section level2">
 <h2>Further Resources</h2>
 <ul>

@@ -211,3 +211,39 @@ knitr::opts_chunk$set(
 #   }
 # )
 
+## ----fhir-resolve-------------------------------------------------------------
+# result <- client$fhir$resolve(
+#   system = "http://snomed.info/sct",
+#   code = "44054006",
+#   resource_type = "Condition"
+# )
+# cat(result$resolution$standard_concept$concept_name)
+# cat(result$resolution$target_table)   # "condition_occurrence"
+# cat(result$resolution$mapping_type)   # "direct"
+
+## ----fhir-mapped--------------------------------------------------------------
+# result <- client$fhir$resolve(
+#   system = "http://hl7.org/fhir/sid/icd-10-cm",
+#   code = "E11.9"
+# )
+# cat(result$resolution$mapping_type)                    # "mapped"
+# cat(result$resolution$standard_concept$vocabulary_id)  # "SNOMED"
+
+## ----fhir-batch---------------------------------------------------------------
+# batch <- client$fhir$resolve_batch(list(
+#   list(system = "http://snomed.info/sct", code = "44054006"),
+#   list(system = "http://loinc.org", code = "2339-0")
+# ))
+# cat(sprintf("Resolved: %d/%d\n", batch$summary$resolved, batch$summary$total))
+
+## ----fhir-codeable------------------------------------------------------------
+# result <- client$fhir$resolve_codeable_concept(
+#   coding = list(
+#     list(system = "http://snomed.info/sct", code = "44054006"),
+#     list(system = "http://hl7.org/fhir/sid/icd-10-cm", code = "E11.9")
+#   ),
+#   resource_type = "Condition"
+# )
+# # SNOMED wins over ICD-10-CM per OHDSI preference
+# cat(result$best_match$resolution$source_concept$vocabulary_id)  # "SNOMED"
+
