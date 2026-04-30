@@ -247,3 +247,72 @@ knitr::opts_chunk$set(
 # # SNOMED wins over ICD-10-CM per OHDSI preference
 # cat(result$best_match$resolution$source_concept$vocabulary_id)  # "SNOMED"
 
+## ----fhir-batch-tibble--------------------------------------------------------
+# library(dplyr)
+# 
+# tbl <- client$fhir$resolve_batch(
+#   list(
+#     list(system = "http://hl7.org/fhir/sid/icd-10-cm", code = "E11.9"),
+#     list(system = "http://hl7.org/fhir/sid/icd-10-cm", code = "I10"),
+#     list(system = "http://hl7.org/fhir/sid/icd-10-cm", code = "J45.909")
+#   ),
+#   as_tibble = TRUE
+# )
+# 
+# tbl |>
+#   filter(status == "resolved") |>
+#   select(source_code, standard_concept_name, target_table)
+
+## ----fhir-batch-summary-------------------------------------------------------
+# attr(tbl, "summary")
+
+## ----fhir-standalone-wrappers-------------------------------------------------
+# # Equivalent to client$fhir$resolve()
+# client |>
+#   fhir_resolve(
+#     system = "http://snomed.info/sct",
+#     code = "44054006",
+#     resource_type = "Condition"
+#   )
+# 
+# # Tibble-shaped batch in a pipe
+# tbl <- client |>
+#   fhir_resolve_batch(
+#     codings = list(
+#       list(system = "http://snomed.info/sct", code = "44054006"),
+#       list(system = "http://loinc.org", code = "2339-0")
+#     ),
+#     as_tibble = TRUE
+#   )
+# 
+# client |>
+#   fhir_resolve_codeable_concept(
+#     coding = list(
+#       list(system = "http://snomed.info/sct", code = "44054006"),
+#       list(system = "http://hl7.org/fhir/sid/icd-10-cm", code = "E11.9")
+#     ),
+#     resource_type = "Condition"
+#   )
+
+## ----fhir-url-helper----------------------------------------------------------
+# omophub_fhir_url()
+# #> "https://fhir.omophub.com/fhir/r4"
+# 
+# omophub_fhir_url("r5")
+# #> "https://fhir.omophub.com/fhir/r5"
+
+## ----fhir-httr2---------------------------------------------------------------
+# library(httr2)
+# 
+# resp <- request(omophub_fhir_url()) |>
+#   req_url_path_append("CodeSystem/$lookup") |>
+#   req_url_query(
+#     system = "http://snomed.info/sct",
+#     code = "44054006"
+#   ) |>
+#   req_headers(Authorization = paste("Bearer", Sys.getenv("OMOPHUB_API_KEY"))) |>
+#   req_perform()
+# 
+# params <- resp_body_json(resp)
+# # Raw FHIR Parameters resource with the concept display and designations.
+

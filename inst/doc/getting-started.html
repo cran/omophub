@@ -634,6 +634,105 @@ automatically.</p>
 <span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="co"># SNOMED wins over ICD-10-CM per OHDSI preference</span></span>
 <span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>best_match<span class="sc">$</span>resolution<span class="sc">$</span>source_concept<span class="sc">$</span>vocabulary_id)  <span class="co"># &quot;SNOMED&quot;</span></span></code></pre></div>
 </div>
+<div id="tibble-output-for-batch-resolution" class="section level3">
+<h3>Tibble Output for Batch Resolution</h3>
+<p>For <code>dplyr</code> / <code>tidyr</code> workflows, pass
+<code>as_tibble = TRUE</code> to get a flat tibble with one row per
+input coding and columns for the source and standard concepts, target
+CDM table, mapping type, and resolution status. This is the most
+ergonomic shape for ETL pipelines processing many codes:</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_batch</span>(</span>
+<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>),</span>
+<span id="cb30-6"><a href="#cb30-6" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;I10&quot;</span>),</span>
+<span id="cb30-7"><a href="#cb30-7" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;J45.909&quot;</span>)</span>
+<span id="cb30-8"><a href="#cb30-8" tabindex="-1"></a>  ),</span>
+<span id="cb30-9"><a href="#cb30-9" tabindex="-1"></a>  <span class="at">as_tibble =</span> <span class="cn">TRUE</span></span>
+<span id="cb30-10"><a href="#cb30-10" tabindex="-1"></a>)</span>
+<span id="cb30-11"><a href="#cb30-11" tabindex="-1"></a></span>
+<span id="cb30-12"><a href="#cb30-12" tabindex="-1"></a>tbl <span class="sc">|&gt;</span></span>
+<span id="cb30-13"><a href="#cb30-13" tabindex="-1"></a>  <span class="fu">filter</span>(status <span class="sc">==</span> <span class="st">&quot;resolved&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb30-14"><a href="#cb30-14" tabindex="-1"></a>  <span class="fu">select</span>(source_code, standard_concept_name, target_table)</span></code></pre></div>
+<p>Failed rows are kept in-place with <code>status = &quot;failed&quot;</code> and
+the error text in <code>status_detail</code> — you can filter them out
+rather than silently dropping them. The batch summary
+(<code>total</code> / <code>resolved</code> / <code>failed</code>) is
+attached as an attribute:</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="fu">attr</span>(tbl, <span class="st">&quot;summary&quot;</span>)</span></code></pre></div>
+<p>The default <code>as_tibble = FALSE</code> still returns the
+list-shaped <code>list(results, summary)</code>, so existing code keeps
+working unchanged.</p>
+</div>
+<div id="standalone-wrapper-functions" class="section level3">
+<h3>Standalone Wrapper Functions</h3>
+<p>For pipe-friendly workflows, <code>omophub</code> also exports
+standalone wrapper functions that take the client as their first
+argument. Both forms are fully supported — pick whichever reads better
+for the surrounding code:</p>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a><span class="co"># Equivalent to client$fhir$resolve()</span></span>
+<span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a>client <span class="sc">|&gt;</span></span>
+<span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a>  <span class="fu">fhir_resolve</span>(</span>
+<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a>    <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a>    <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>,</span>
+<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a>    <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a>  )</span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a></span>
+<span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a><span class="co"># Tibble-shaped batch in a pipe</span></span>
+<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> client <span class="sc">|&gt;</span></span>
+<span id="cb32-11"><a href="#cb32-11" tabindex="-1"></a>  <span class="fu">fhir_resolve_batch</span>(</span>
+<span id="cb32-12"><a href="#cb32-12" tabindex="-1"></a>    <span class="at">codings =</span> <span class="fu">list</span>(</span>
+<span id="cb32-13"><a href="#cb32-13" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb32-14"><a href="#cb32-14" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://loinc.org&quot;</span>, <span class="at">code =</span> <span class="st">&quot;2339-0&quot;</span>)</span>
+<span id="cb32-15"><a href="#cb32-15" tabindex="-1"></a>    ),</span>
+<span id="cb32-16"><a href="#cb32-16" tabindex="-1"></a>    <span class="at">as_tibble =</span> <span class="cn">TRUE</span></span>
+<span id="cb32-17"><a href="#cb32-17" tabindex="-1"></a>  )</span>
+<span id="cb32-18"><a href="#cb32-18" tabindex="-1"></a></span>
+<span id="cb32-19"><a href="#cb32-19" tabindex="-1"></a>client <span class="sc">|&gt;</span></span>
+<span id="cb32-20"><a href="#cb32-20" tabindex="-1"></a>  <span class="fu">fhir_resolve_codeable_concept</span>(</span>
+<span id="cb32-21"><a href="#cb32-21" tabindex="-1"></a>    <span class="at">coding =</span> <span class="fu">list</span>(</span>
+<span id="cb32-22"><a href="#cb32-22" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb32-23"><a href="#cb32-23" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>)</span>
+<span id="cb32-24"><a href="#cb32-24" tabindex="-1"></a>    ),</span>
+<span id="cb32-25"><a href="#cb32-25" tabindex="-1"></a>    <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb32-26"><a href="#cb32-26" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="fhir-client-interop-with-omophub_fhir_url" class="section level3">
+<h3>FHIR Client Interop with <code>omophub_fhir_url()</code></h3>
+<p>When you need raw FHIR <code>Parameters</code> / <code>Bundle</code>
+responses instead of the Concept Resolver envelope,
+<code>omophub_fhir_url()</code> returns the OMOPHub FHIR Terminology
+Service base URL so you can talk to it directly with <code>httr2</code>
+or <code>fhircrackr</code>. Supports FHIR versions <code>&quot;r4&quot;</code>
+(default), <code>&quot;r4b&quot;</code>, <code>&quot;r5&quot;</code>, and
+<code>&quot;r6&quot;</code>:</p>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="fu">omophub_fhir_url</span>()</span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a><span class="co">#&gt; &quot;https://fhir.omophub.com/fhir/r4&quot;</span></span>
+<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a></span>
+<span id="cb33-4"><a href="#cb33-4" tabindex="-1"></a><span class="fu">omophub_fhir_url</span>(<span class="st">&quot;r5&quot;</span>)</span>
+<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a><span class="co">#&gt; &quot;https://fhir.omophub.com/fhir/r5&quot;</span></span></code></pre></div>
+<p>Example: call <code>CodeSystem/$lookup</code> directly with
+<code>httr2</code>:</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="fu">library</span>(httr2)</span>
+<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a></span>
+<span id="cb34-3"><a href="#cb34-3" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="fu">omophub_fhir_url</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb34-4"><a href="#cb34-4" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;CodeSystem/$lookup&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb34-5"><a href="#cb34-5" tabindex="-1"></a>  <span class="fu">req_url_query</span>(</span>
+<span id="cb34-6"><a href="#cb34-6" tabindex="-1"></a>    <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
+<span id="cb34-7"><a href="#cb34-7" tabindex="-1"></a>    <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span></span>
+<span id="cb34-8"><a href="#cb34-8" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb34-9"><a href="#cb34-9" tabindex="-1"></a>  <span class="fu">req_headers</span>(<span class="at">Authorization =</span> <span class="fu">paste</span>(<span class="st">&quot;Bearer&quot;</span>, <span class="fu">Sys.getenv</span>(<span class="st">&quot;OMOPHUB_API_KEY&quot;</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb34-10"><a href="#cb34-10" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb34-11"><a href="#cb34-11" tabindex="-1"></a></span>
+<span id="cb34-12"><a href="#cb34-12" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">resp_body_json</span>(resp)</span>
+<span id="cb34-13"><a href="#cb34-13" tabindex="-1"></a><span class="co"># Raw FHIR Parameters resource with the concept display and designations.</span></span></code></pre></div>
+<p>Use <code>client$fhir$resolve()</code> (or
+<code>fhir_resolve()</code>) when you want OMOP-enriched answers
+(standard concept, CDM target table, mapping quality). Use
+<code>omophub_fhir_url()</code> + <code>httr2</code> when you need
+FHIR-native responses for FHIR-native tooling.</p>
+</div>
 </div>
 <div id="further-resources" class="section level2">
 <h2>Further Resources</h2>
