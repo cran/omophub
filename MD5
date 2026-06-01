@@ -1,7 +1,7 @@
-efc00bd5f89a9763169aab2b6e050a25 *DESCRIPTION
+68912768826d046c29c001e61fa8422d *DESCRIPTION
 14a9a82d833aa2b2e1ff87b9309f2925 *LICENSE
 72b8f61381d143434f87f2a341843bb2 *NAMESPACE
-428b093dffabca75dcd9d8d7aed24395 *NEWS.md
+bd25872505c3f3d355e81b9addf057b7 *NEWS.md
 c33576dab727029b85421b8323f486a7 *R/auth.R
 481a047cc2d8c614e47fbd91da0b42ce *R/client.R
 1a75627465bb8176b44eb76fceca1e5d *R/concepts.R
@@ -15,7 +15,7 @@ a1e53a18b94bfa31747c40f86e04a7ca *R/mappings.R
 df8d6abcaf44e4be286424e4d5772edc *R/relationships.R
 956f37ac05de11c8830d72f7995edbc8 *R/request.R
 01dd0e71d36afd42c6afbe5c0c8ca0c7 *R/response.R
-00a7d7018d86191925cd50fc33f63fb1 *R/search.R
+c6b603196742941d93e0bf20198df831 *R/search.R
 fdf68db1257cdb92acb286898d3efb25 *R/utils.R
 a45195d8dd8f2092947a20498db84d0e *R/vocabularies.R
 683d569af7c70d8dca67710436c0d981 *R/zzz.R
@@ -97,7 +97,7 @@ fd8b72080cd0d562533dbc2f0c8fa6d1 *tests/testthat/test-fhir-interop.R
 44756094a0728255e590bb6166156970 *tests/testthat/test-request.R
 b43cc669b95636ef491e4130f7679795 *tests/testthat/test-response.R
 cafb610eba6ad09ea0238333404551fd *tests/testthat/test-search-integration.R
-657721bdf6becb6ac1feb8d0db30a7e5 *tests/testthat/test-search.R
+f57ca24b4bdf712368b4392159345fbb *tests/testthat/test-search.R
 d39e3d207105589e95badaad4083973c *tests/testthat/test-utils.R
 0e63ee5241709a6e5b6c27abc945d6cc *tests/testthat/test-vocabularies-integration.R
 3564356ff477c263e9456ccfd50031a5 *tests/testthat/test-vocabularies.R
