@@ -1,6 +1,6 @@
 Package: omophub
 Title: R Client for the 'OMOPHub' Medical Vocabulary API
-Version: 1.8.1
+Version: 1.9.0
 Authors@R: c(
     person("Alex", "Chen", email = "alex@omophub.com", role = c("aut", "cre", "cph")),
     person("Observational Health Data Science and Informatics", role = c("cph"))
@@ -24,9 +24,9 @@ Encoding: UTF-8
 RoxygenNote: 7.3.2
 VignetteBuilder: knitr
 NeedsCompilation: no
-Packaged: 2026-06-01 15:32:27 UTC; konstantin
+Packaged: 2026-08-12 10:53:36 UTC; konstantin
 Author: Alex Chen [aut, cre, cph],
   Observational Health Data Science and Informatics [cph]
 Maintainer: Alex Chen <alex@omophub.com>
 Repository: CRAN
-Date/Publication: 2026-06-01 18:20:02 UTC
+Date/Publication: 2026-08-19 18:20:02 UTC

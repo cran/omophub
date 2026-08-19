@@ -564,29 +564,54 @@ embeddings:</p>
 <div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>mappings<span class="sc">$</span><span class="fu">get</span>(<span class="dv">201826</span>)</span>
 <span id="cb23-2"><a href="#cb23-2" tabindex="-1"></a><span class="cf">for</span> (mapping <span class="cf">in</span> result<span class="sc">$</span>mappings) {</span>
 <span id="cb23-3"><a href="#cb23-3" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;%s: %s</span><span class="sc">\n</span><span class="st">&quot;</span>,</span>
-<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a>              mapping<span class="sc">$</span>target_vocabulary_id,</span>
+<span id="cb23-4"><a href="#cb23-4" tabindex="-1"></a>              mapping<span class="sc">$</span>relationship_id,</span>
 <span id="cb23-5"><a href="#cb23-5" tabindex="-1"></a>              mapping<span class="sc">$</span>target_concept_name))</span>
 <span id="cb23-6"><a href="#cb23-6" tabindex="-1"></a>}</span></code></pre></div>
-<p>Map to specific vocabularies:</p>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>mappings<span class="sc">$</span><span class="fu">get</span>(</span>
-<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>  <span class="dv">201826</span>,</span>
-<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>  <span class="at">target_vocabulary =</span> <span class="st">&quot;ICD10CM&quot;</span></span>
-<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>)</span></code></pre></div>
+<p><code>get()</code> returns one page. The pagination metadata rides
+along as an attribute, and <code>get_all()</code> walks every page —
+prefer it when you are building a code list:</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="fu">attr</span>(result, <span class="st">&quot;pagination&quot;</span>)<span class="sc">$</span>total_items</span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>all_mappings <span class="ot">&lt;-</span> client<span class="sc">$</span>mappings<span class="sc">$</span><span class="fu">get_all</span>(<span class="dv">201826</span>, <span class="at">progress =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a><span class="fu">nrow</span>(all_mappings)</span></code></pre></div>
+<p>Mind the direction when filtering by vocabulary. <code>Maps to</code>
+always points at a <em>standard</em> concept, so asking a SNOMED concept
+for its ICD-10-CM mappings returns nothing — an empty list, not an
+error. The codes that roll up into a standard concept are reached with
+<code>Mapped from</code>:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a>icd_codes <span class="ot">&lt;-</span> client<span class="sc">$</span>mappings<span class="sc">$</span><span class="fu">get_all</span>(</span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a>  <span class="dv">201826</span>,</span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>  <span class="at">relationship_ids =</span> <span class="st">&quot;Mapped from&quot;</span>,</span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a>  <span class="at">target_vocabulary =</span> <span class="st">&quot;ICD10CM&quot;</span>,</span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a>  <span class="at">progress =</span> <span class="cn">FALSE</span></span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a>)</span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a><span class="fu">nrow</span>(icd_codes)</span></code></pre></div>
+<p>Composite concepts decompose across two relationships, and the
+default returns only the first — <code>Maps to</code> gives you “Allergy
+to drug”, while <code>Maps to value</code> gives you <em>which</em>
+drug, destined for <code>value_as_concept_id</code>:</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a>decomposed <span class="ot">&lt;-</span> client<span class="sc">$</span>mappings<span class="sc">$</span><span class="fu">get</span>(</span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>  <span class="dv">4167462</span>,  <span class="co"># Allergy to penicillin G</span></span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a>  <span class="at">relationship_ids =</span> <span class="fu">c</span>(<span class="st">&quot;Maps to&quot;</span>, <span class="st">&quot;Maps to value&quot;</span>)</span>
+<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a>)</span>
+<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a><span class="cf">for</span> (m <span class="cf">in</span> decomposed<span class="sc">$</span>mappings) {</span>
+<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;%s: %s</span><span class="sc">\n</span><span class="st">&quot;</span>, m<span class="sc">$</span>relationship_id, m<span class="sc">$</span>target_concept_name))</span>
+<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 <div id="error-handling" class="section level2">
 <h2>Error Handling</h2>
 <p>Use <code>tryCatch</code> to handle errors:</p>
-<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="fu">tryCatch</span>(</span>
-<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a>  {</span>
-<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>    concept <span class="ot">&lt;-</span> client<span class="sc">$</span>concepts<span class="sc">$</span><span class="fu">get</span>(<span class="dv">999999999</span>)</span>
-<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a>  },</span>
-<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a>  <span class="at">omophub_not_found =</span> <span class="cf">function</span>(e) {</span>
-<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;Concept not found: &quot;</span>, e<span class="sc">$</span>message)</span>
-<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a>  },</span>
-<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a>  <span class="at">omophub_api_error =</span> <span class="cf">function</span>(e) {</span>
-<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;API error: &quot;</span>, e<span class="sc">$</span>message)</span>
-<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a>  }</span>
-<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="fu">tryCatch</span>(</span>
+<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>  {</span>
+<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>    concept <span class="ot">&lt;-</span> client<span class="sc">$</span>concepts<span class="sc">$</span><span class="fu">get</span>(<span class="dv">999999999</span>)</span>
+<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a>  },</span>
+<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a>  <span class="at">omophub_not_found =</span> <span class="cf">function</span>(e) {</span>
+<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;Concept not found: &quot;</span>, e<span class="sc">$</span>message)</span>
+<span id="cb27-7"><a href="#cb27-7" tabindex="-1"></a>  },</span>
+<span id="cb27-8"><a href="#cb27-8" tabindex="-1"></a>  <span class="at">omophub_api_error =</span> <span class="cf">function</span>(e) {</span>
+<span id="cb27-9"><a href="#cb27-9" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;API error: &quot;</span>, e<span class="sc">$</span>message)</span>
+<span id="cb27-10"><a href="#cb27-10" tabindex="-1"></a>  }</span>
+<span id="cb27-11"><a href="#cb27-11" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="fhir-to-omop-resolution" class="section level2">
 <h2>FHIR-to-OMOP Resolution</h2>
@@ -596,57 +621,57 @@ concepts in a single call — handling URI mapping, code lookup,
 automatically.</p>
 <div id="single-coding" class="section level3">
 <h3>Single Coding</h3>
-<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve</span>(</span>
-<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a>  <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
-<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a>  <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>,</span>
-<span id="cb26-4"><a href="#cb26-4" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
-<span id="cb26-5"><a href="#cb26-5" tabindex="-1"></a>)</span>
-<span id="cb26-6"><a href="#cb26-6" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>standard_concept<span class="sc">$</span>concept_name)</span>
-<span id="cb26-7"><a href="#cb26-7" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>target_table)   <span class="co"># &quot;condition_occurrence&quot;</span></span>
-<span id="cb26-8"><a href="#cb26-8" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>mapping_type)   <span class="co"># &quot;direct&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve</span>(</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>  <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a>  <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>,</span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a>)</span>
+<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>standard_concept<span class="sc">$</span>concept_name)</span>
+<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>target_table)   <span class="co"># &quot;condition_occurrence&quot;</span></span>
+<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>mapping_type)   <span class="co"># &quot;direct&quot;</span></span></code></pre></div>
 </div>
 <div id="non-standard-code-automatic-maps-to-traversal" class="section level3">
 <h3>Non-Standard Code (Automatic Maps-to Traversal)</h3>
-<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve</span>(</span>
-<span id="cb27-2"><a href="#cb27-2" tabindex="-1"></a>  <span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>,</span>
-<span id="cb27-3"><a href="#cb27-3" tabindex="-1"></a>  <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span></span>
-<span id="cb27-4"><a href="#cb27-4" tabindex="-1"></a>)</span>
-<span id="cb27-5"><a href="#cb27-5" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>mapping_type)                    <span class="co"># &quot;mapped&quot;</span></span>
-<span id="cb27-6"><a href="#cb27-6" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>standard_concept<span class="sc">$</span>vocabulary_id)  <span class="co"># &quot;SNOMED&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve</span>(</span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>  <span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>,</span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>  <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span></span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>)</span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>mapping_type)                    <span class="co"># &quot;mapped&quot;</span></span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>resolution<span class="sc">$</span>standard_concept<span class="sc">$</span>vocabulary_id)  <span class="co"># &quot;SNOMED&quot;</span></span></code></pre></div>
 </div>
 <div id="batch-resolution" class="section level3">
 <h3>Batch Resolution</h3>
-<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>batch <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_batch</span>(<span class="fu">list</span>(</span>
-<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
-<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://loinc.org&quot;</span>, <span class="at">code =</span> <span class="st">&quot;2339-0&quot;</span>)</span>
-<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a>))</span>
-<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Resolved: %d/%d</span><span class="sc">\n</span><span class="st">&quot;</span>, batch<span class="sc">$</span>summary<span class="sc">$</span>resolved, batch<span class="sc">$</span>summary<span class="sc">$</span>total))</span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a>batch <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_batch</span>(<span class="fu">list</span>(</span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://loinc.org&quot;</span>, <span class="at">code =</span> <span class="st">&quot;2339-0&quot;</span>)</span>
+<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a>))</span>
+<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Resolved: %d/%d</span><span class="sc">\n</span><span class="st">&quot;</span>, batch<span class="sc">$</span>summary<span class="sc">$</span>resolved, batch<span class="sc">$</span>summary<span class="sc">$</span>total))</span></code></pre></div>
 </div>
 <div id="codeableconcept-with-vocabulary-preference" class="section level3">
 <h3>CodeableConcept with Vocabulary Preference</h3>
-<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_codeable_concept</span>(</span>
-<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a>  <span class="at">coding =</span> <span class="fu">list</span>(</span>
-<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
-<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>)</span>
-<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a>  ),</span>
-<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
-<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a>)</span>
-<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="co"># SNOMED wins over ICD-10-CM per OHDSI preference</span></span>
-<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>best_match<span class="sc">$</span>resolution<span class="sc">$</span>source_concept<span class="sc">$</span>vocabulary_id)  <span class="co"># &quot;SNOMED&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a>result <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_codeable_concept</span>(</span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a>  <span class="at">coding =</span> <span class="fu">list</span>(</span>
+<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb31-4"><a href="#cb31-4" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>)</span>
+<span id="cb31-5"><a href="#cb31-5" tabindex="-1"></a>  ),</span>
+<span id="cb31-6"><a href="#cb31-6" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb31-7"><a href="#cb31-7" tabindex="-1"></a>)</span>
+<span id="cb31-8"><a href="#cb31-8" tabindex="-1"></a><span class="co"># SNOMED wins over ICD-10-CM per OHDSI preference</span></span>
+<span id="cb31-9"><a href="#cb31-9" tabindex="-1"></a><span class="fu">cat</span>(result<span class="sc">$</span>best_match<span class="sc">$</span>resolution<span class="sc">$</span>source_concept<span class="sc">$</span>vocabulary_id)  <span class="co"># &quot;SNOMED&quot;</span></span></code></pre></div>
 <p>To override the vocabulary preference, mark a coding with
 <code>user_selected = TRUE</code> (mirroring FHIR
 <code>Coding.userSelected</code>); that coding then wins
 <code>best_match</code> regardless of its vocabulary:</p>
-<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a>client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_codeable_concept</span>(</span>
-<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a>  <span class="at">coding =</span> <span class="fu">list</span>(</span>
-<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a>    <span class="fu">list</span>(</span>
-<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a>      <span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>,</span>
-<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a>      <span class="at">user_selected =</span> <span class="cn">TRUE</span></span>
-<span id="cb30-6"><a href="#cb30-6" tabindex="-1"></a>    ),</span>
-<span id="cb30-7"><a href="#cb30-7" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>)</span>
-<span id="cb30-8"><a href="#cb30-8" tabindex="-1"></a>  ),</span>
-<span id="cb30-9"><a href="#cb30-9" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
-<span id="cb30-10"><a href="#cb30-10" tabindex="-1"></a>)</span></code></pre></div>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a>client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_codeable_concept</span>(</span>
+<span id="cb32-2"><a href="#cb32-2" tabindex="-1"></a>  <span class="at">coding =</span> <span class="fu">list</span>(</span>
+<span id="cb32-3"><a href="#cb32-3" tabindex="-1"></a>    <span class="fu">list</span>(</span>
+<span id="cb32-4"><a href="#cb32-4" tabindex="-1"></a>      <span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>,</span>
+<span id="cb32-5"><a href="#cb32-5" tabindex="-1"></a>      <span class="at">user_selected =</span> <span class="cn">TRUE</span></span>
+<span id="cb32-6"><a href="#cb32-6" tabindex="-1"></a>    ),</span>
+<span id="cb32-7"><a href="#cb32-7" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>)</span>
+<span id="cb32-8"><a href="#cb32-8" tabindex="-1"></a>  ),</span>
+<span id="cb32-9"><a href="#cb32-9" tabindex="-1"></a>  <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb32-10"><a href="#cb32-10" tabindex="-1"></a>)</span></code></pre></div>
 </div>
 <div id="tibble-output-for-batch-resolution" class="section level3">
 <h3>Tibble Output for Batch Resolution</h3>
@@ -658,26 +683,26 @@ decomposed via <code>Maps to value</code> (the HL7 FHIR-to-OMOP IG
 Value-as-Concept pattern) also populate <code>value_as_concept_id</code>
 / <code>value_as_concept_name</code>. This is the most ergonomic shape
 for ETL pipelines processing many codes:</p>
-<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a></span>
-<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_batch</span>(</span>
-<span id="cb31-4"><a href="#cb31-4" tabindex="-1"></a>  <span class="fu">list</span>(</span>
-<span id="cb31-5"><a href="#cb31-5" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>),</span>
-<span id="cb31-6"><a href="#cb31-6" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;I10&quot;</span>),</span>
-<span id="cb31-7"><a href="#cb31-7" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;J45.909&quot;</span>)</span>
-<span id="cb31-8"><a href="#cb31-8" tabindex="-1"></a>  ),</span>
-<span id="cb31-9"><a href="#cb31-9" tabindex="-1"></a>  <span class="at">as_tibble =</span> <span class="cn">TRUE</span></span>
-<span id="cb31-10"><a href="#cb31-10" tabindex="-1"></a>)</span>
-<span id="cb31-11"><a href="#cb31-11" tabindex="-1"></a></span>
-<span id="cb31-12"><a href="#cb31-12" tabindex="-1"></a>tbl <span class="sc">|&gt;</span></span>
-<span id="cb31-13"><a href="#cb31-13" tabindex="-1"></a>  <span class="fu">filter</span>(status <span class="sc">==</span> <span class="st">&quot;resolved&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb31-14"><a href="#cb31-14" tabindex="-1"></a>  <span class="fu">select</span>(source_code, standard_concept_name, target_table)</span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> client<span class="sc">$</span>fhir<span class="sc">$</span><span class="fu">resolve_batch</span>(</span>
+<span id="cb33-4"><a href="#cb33-4" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>),</span>
+<span id="cb33-6"><a href="#cb33-6" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;I10&quot;</span>),</span>
+<span id="cb33-7"><a href="#cb33-7" tabindex="-1"></a>    <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;J45.909&quot;</span>)</span>
+<span id="cb33-8"><a href="#cb33-8" tabindex="-1"></a>  ),</span>
+<span id="cb33-9"><a href="#cb33-9" tabindex="-1"></a>  <span class="at">as_tibble =</span> <span class="cn">TRUE</span></span>
+<span id="cb33-10"><a href="#cb33-10" tabindex="-1"></a>)</span>
+<span id="cb33-11"><a href="#cb33-11" tabindex="-1"></a></span>
+<span id="cb33-12"><a href="#cb33-12" tabindex="-1"></a>tbl <span class="sc">|&gt;</span></span>
+<span id="cb33-13"><a href="#cb33-13" tabindex="-1"></a>  <span class="fu">filter</span>(status <span class="sc">==</span> <span class="st">&quot;resolved&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb33-14"><a href="#cb33-14" tabindex="-1"></a>  <span class="fu">select</span>(source_code, standard_concept_name, target_table)</span></code></pre></div>
 <p>Failed rows are kept in-place with <code>status = &quot;failed&quot;</code> and
 the error text in <code>status_detail</code> — you can filter them out
 rather than silently dropping them. The batch summary
 (<code>total</code> / <code>resolved</code> / <code>failed</code>) is
 attached as an attribute:</p>
-<div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" tabindex="-1"></a><span class="fu">attr</span>(tbl, <span class="st">&quot;summary&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="fu">attr</span>(tbl, <span class="st">&quot;summary&quot;</span>)</span></code></pre></div>
 <p>The default <code>as_tibble = FALSE</code> still returns the
 list-shaped <code>list(results, summary)</code>, so existing code keeps
 working unchanged.</p>
@@ -688,32 +713,32 @@ working unchanged.</p>
 standalone wrapper functions that take the client as their first
 argument. Both forms are fully supported — pick whichever reads better
 for the surrounding code:</p>
-<div class="sourceCode" id="cb33"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" tabindex="-1"></a><span class="co"># Equivalent to client$fhir$resolve()</span></span>
-<span id="cb33-2"><a href="#cb33-2" tabindex="-1"></a>client <span class="sc">|&gt;</span></span>
-<span id="cb33-3"><a href="#cb33-3" tabindex="-1"></a>  <span class="fu">fhir_resolve</span>(</span>
-<span id="cb33-4"><a href="#cb33-4" tabindex="-1"></a>    <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
-<span id="cb33-5"><a href="#cb33-5" tabindex="-1"></a>    <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>,</span>
-<span id="cb33-6"><a href="#cb33-6" tabindex="-1"></a>    <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
-<span id="cb33-7"><a href="#cb33-7" tabindex="-1"></a>  )</span>
-<span id="cb33-8"><a href="#cb33-8" tabindex="-1"></a></span>
-<span id="cb33-9"><a href="#cb33-9" tabindex="-1"></a><span class="co"># Tibble-shaped batch in a pipe</span></span>
-<span id="cb33-10"><a href="#cb33-10" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> client <span class="sc">|&gt;</span></span>
-<span id="cb33-11"><a href="#cb33-11" tabindex="-1"></a>  <span class="fu">fhir_resolve_batch</span>(</span>
-<span id="cb33-12"><a href="#cb33-12" tabindex="-1"></a>    <span class="at">codings =</span> <span class="fu">list</span>(</span>
-<span id="cb33-13"><a href="#cb33-13" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
-<span id="cb33-14"><a href="#cb33-14" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://loinc.org&quot;</span>, <span class="at">code =</span> <span class="st">&quot;2339-0&quot;</span>)</span>
-<span id="cb33-15"><a href="#cb33-15" tabindex="-1"></a>    ),</span>
-<span id="cb33-16"><a href="#cb33-16" tabindex="-1"></a>    <span class="at">as_tibble =</span> <span class="cn">TRUE</span></span>
-<span id="cb33-17"><a href="#cb33-17" tabindex="-1"></a>  )</span>
-<span id="cb33-18"><a href="#cb33-18" tabindex="-1"></a></span>
-<span id="cb33-19"><a href="#cb33-19" tabindex="-1"></a>client <span class="sc">|&gt;</span></span>
-<span id="cb33-20"><a href="#cb33-20" tabindex="-1"></a>  <span class="fu">fhir_resolve_codeable_concept</span>(</span>
-<span id="cb33-21"><a href="#cb33-21" tabindex="-1"></a>    <span class="at">coding =</span> <span class="fu">list</span>(</span>
-<span id="cb33-22"><a href="#cb33-22" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
-<span id="cb33-23"><a href="#cb33-23" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>)</span>
-<span id="cb33-24"><a href="#cb33-24" tabindex="-1"></a>    ),</span>
-<span id="cb33-25"><a href="#cb33-25" tabindex="-1"></a>    <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
-<span id="cb33-26"><a href="#cb33-26" tabindex="-1"></a>  )</span></code></pre></div>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a><span class="co"># Equivalent to client$fhir$resolve()</span></span>
+<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a>client <span class="sc">|&gt;</span></span>
+<span id="cb35-3"><a href="#cb35-3" tabindex="-1"></a>  <span class="fu">fhir_resolve</span>(</span>
+<span id="cb35-4"><a href="#cb35-4" tabindex="-1"></a>    <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
+<span id="cb35-5"><a href="#cb35-5" tabindex="-1"></a>    <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>,</span>
+<span id="cb35-6"><a href="#cb35-6" tabindex="-1"></a>    <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb35-7"><a href="#cb35-7" tabindex="-1"></a>  )</span>
+<span id="cb35-8"><a href="#cb35-8" tabindex="-1"></a></span>
+<span id="cb35-9"><a href="#cb35-9" tabindex="-1"></a><span class="co"># Tibble-shaped batch in a pipe</span></span>
+<span id="cb35-10"><a href="#cb35-10" tabindex="-1"></a>tbl <span class="ot">&lt;-</span> client <span class="sc">|&gt;</span></span>
+<span id="cb35-11"><a href="#cb35-11" tabindex="-1"></a>  <span class="fu">fhir_resolve_batch</span>(</span>
+<span id="cb35-12"><a href="#cb35-12" tabindex="-1"></a>    <span class="at">codings =</span> <span class="fu">list</span>(</span>
+<span id="cb35-13"><a href="#cb35-13" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb35-14"><a href="#cb35-14" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://loinc.org&quot;</span>, <span class="at">code =</span> <span class="st">&quot;2339-0&quot;</span>)</span>
+<span id="cb35-15"><a href="#cb35-15" tabindex="-1"></a>    ),</span>
+<span id="cb35-16"><a href="#cb35-16" tabindex="-1"></a>    <span class="at">as_tibble =</span> <span class="cn">TRUE</span></span>
+<span id="cb35-17"><a href="#cb35-17" tabindex="-1"></a>  )</span>
+<span id="cb35-18"><a href="#cb35-18" tabindex="-1"></a></span>
+<span id="cb35-19"><a href="#cb35-19" tabindex="-1"></a>client <span class="sc">|&gt;</span></span>
+<span id="cb35-20"><a href="#cb35-20" tabindex="-1"></a>  <span class="fu">fhir_resolve_codeable_concept</span>(</span>
+<span id="cb35-21"><a href="#cb35-21" tabindex="-1"></a>    <span class="at">coding =</span> <span class="fu">list</span>(</span>
+<span id="cb35-22"><a href="#cb35-22" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>, <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span>),</span>
+<span id="cb35-23"><a href="#cb35-23" tabindex="-1"></a>      <span class="fu">list</span>(<span class="at">system =</span> <span class="st">&quot;http://hl7.org/fhir/sid/icd-10-cm&quot;</span>, <span class="at">code =</span> <span class="st">&quot;E11.9&quot;</span>)</span>
+<span id="cb35-24"><a href="#cb35-24" tabindex="-1"></a>    ),</span>
+<span id="cb35-25"><a href="#cb35-25" tabindex="-1"></a>    <span class="at">resource_type =</span> <span class="st">&quot;Condition&quot;</span></span>
+<span id="cb35-26"><a href="#cb35-26" tabindex="-1"></a>  )</span></code></pre></div>
 </div>
 <div id="fhir-client-interop-with-omophub_fhir_url" class="section level3">
 <h3>FHIR Client Interop with <code>omophub_fhir_url()</code></h3>
@@ -724,26 +749,26 @@ Service base URL so you can talk to it directly with <code>httr2</code>
 or <code>fhircrackr</code>. Supports FHIR versions <code>&quot;r4&quot;</code>
 (default), <code>&quot;r4b&quot;</code>, <code>&quot;r5&quot;</code>, and
 <code>&quot;r6&quot;</code>:</p>
-<div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" tabindex="-1"></a><span class="fu">omophub_fhir_url</span>()</span>
-<span id="cb34-2"><a href="#cb34-2" tabindex="-1"></a><span class="co">#&gt; &quot;https://fhir.omophub.com/fhir/r4&quot;</span></span>
-<span id="cb34-3"><a href="#cb34-3" tabindex="-1"></a></span>
-<span id="cb34-4"><a href="#cb34-4" tabindex="-1"></a><span class="fu">omophub_fhir_url</span>(<span class="st">&quot;r5&quot;</span>)</span>
-<span id="cb34-5"><a href="#cb34-5" tabindex="-1"></a><span class="co">#&gt; &quot;https://fhir.omophub.com/fhir/r5&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" tabindex="-1"></a><span class="fu">omophub_fhir_url</span>()</span>
+<span id="cb36-2"><a href="#cb36-2" tabindex="-1"></a><span class="co">#&gt; &quot;https://fhir.omophub.com/fhir/r4&quot;</span></span>
+<span id="cb36-3"><a href="#cb36-3" tabindex="-1"></a></span>
+<span id="cb36-4"><a href="#cb36-4" tabindex="-1"></a><span class="fu">omophub_fhir_url</span>(<span class="st">&quot;r5&quot;</span>)</span>
+<span id="cb36-5"><a href="#cb36-5" tabindex="-1"></a><span class="co">#&gt; &quot;https://fhir.omophub.com/fhir/r5&quot;</span></span></code></pre></div>
 <p>Example: call <code>CodeSystem/$lookup</code> directly with
 <code>httr2</code>:</p>
-<div class="sourceCode" id="cb35"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" tabindex="-1"></a><span class="fu">library</span>(httr2)</span>
-<span id="cb35-2"><a href="#cb35-2" tabindex="-1"></a></span>
-<span id="cb35-3"><a href="#cb35-3" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="fu">omophub_fhir_url</span>()) <span class="sc">|&gt;</span></span>
-<span id="cb35-4"><a href="#cb35-4" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;CodeSystem/$lookup&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb35-5"><a href="#cb35-5" tabindex="-1"></a>  <span class="fu">req_url_query</span>(</span>
-<span id="cb35-6"><a href="#cb35-6" tabindex="-1"></a>    <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
-<span id="cb35-7"><a href="#cb35-7" tabindex="-1"></a>    <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span></span>
-<span id="cb35-8"><a href="#cb35-8" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb35-9"><a href="#cb35-9" tabindex="-1"></a>  <span class="fu">req_headers</span>(<span class="at">Authorization =</span> <span class="fu">paste</span>(<span class="st">&quot;Bearer&quot;</span>, <span class="fu">Sys.getenv</span>(<span class="st">&quot;OMOPHUB_API_KEY&quot;</span>))) <span class="sc">|&gt;</span></span>
-<span id="cb35-10"><a href="#cb35-10" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
-<span id="cb35-11"><a href="#cb35-11" tabindex="-1"></a></span>
-<span id="cb35-12"><a href="#cb35-12" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">resp_body_json</span>(resp)</span>
-<span id="cb35-13"><a href="#cb35-13" tabindex="-1"></a><span class="co"># Raw FHIR Parameters resource with the concept display and designations.</span></span></code></pre></div>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" tabindex="-1"></a><span class="fu">library</span>(httr2)</span>
+<span id="cb37-2"><a href="#cb37-2" tabindex="-1"></a></span>
+<span id="cb37-3"><a href="#cb37-3" tabindex="-1"></a>resp <span class="ot">&lt;-</span> <span class="fu">request</span>(<span class="fu">omophub_fhir_url</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb37-4"><a href="#cb37-4" tabindex="-1"></a>  <span class="fu">req_url_path_append</span>(<span class="st">&quot;CodeSystem/$lookup&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb37-5"><a href="#cb37-5" tabindex="-1"></a>  <span class="fu">req_url_query</span>(</span>
+<span id="cb37-6"><a href="#cb37-6" tabindex="-1"></a>    <span class="at">system =</span> <span class="st">&quot;http://snomed.info/sct&quot;</span>,</span>
+<span id="cb37-7"><a href="#cb37-7" tabindex="-1"></a>    <span class="at">code =</span> <span class="st">&quot;44054006&quot;</span></span>
+<span id="cb37-8"><a href="#cb37-8" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb37-9"><a href="#cb37-9" tabindex="-1"></a>  <span class="fu">req_headers</span>(<span class="at">Authorization =</span> <span class="fu">paste</span>(<span class="st">&quot;Bearer&quot;</span>, <span class="fu">Sys.getenv</span>(<span class="st">&quot;OMOPHUB_API_KEY&quot;</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb37-10"><a href="#cb37-10" tabindex="-1"></a>  <span class="fu">req_perform</span>()</span>
+<span id="cb37-11"><a href="#cb37-11" tabindex="-1"></a></span>
+<span id="cb37-12"><a href="#cb37-12" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">resp_body_json</span>(resp)</span>
+<span id="cb37-13"><a href="#cb37-13" tabindex="-1"></a><span class="co"># Raw FHIR Parameters resource with the concept display and designations.</span></span></code></pre></div>
 <p>Use <code>client$fhir$resolve()</code> (or
 <code>fhir_resolve()</code>) when you want OMOP-enriched answers
 (standard concept, CDM target table, mapping quality). Use

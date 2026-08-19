@@ -188,15 +188,33 @@ knitr::opts_chunk$set(
 # result <- client$mappings$get(201826)
 # for (mapping in result$mappings) {
 #   cat(sprintf("%s: %s\n",
-#               mapping$target_vocabulary_id,
+#               mapping$relationship_id,
 #               mapping$target_concept_name))
 # }
 
+## ----mappings-pagination------------------------------------------------------
+# attr(result, "pagination")$total_items
+# 
+# all_mappings <- client$mappings$get_all(201826, progress = FALSE)
+# nrow(all_mappings)
+
 ## ----mappings-filter----------------------------------------------------------
-# result <- client$mappings$get(
+# icd_codes <- client$mappings$get_all(
 #   201826,
-#   target_vocabulary = "ICD10CM"
+#   relationship_ids = "Mapped from",
+#   target_vocabulary = "ICD10CM",
+#   progress = FALSE
 # )
+# nrow(icd_codes)
+
+## ----mappings-value-as-concept------------------------------------------------
+# decomposed <- client$mappings$get(
+#   4167462,  # Allergy to penicillin G
+#   relationship_ids = c("Maps to", "Maps to value")
+# )
+# for (m in decomposed$mappings) {
+#   cat(sprintf("%s: %s\n", m$relationship_id, m$target_concept_name))
+# }
 
 ## ----error-handling-----------------------------------------------------------
 # tryCatch(
